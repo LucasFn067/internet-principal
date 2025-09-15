@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento de Links - Prefeitura de Guaíba</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #374151 0%, #1f2937 100%); }
+        .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .alert-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen text-gray-100">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6 shadow-lg">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold text-center">Sistema de Gerenciamento de Links</h1>
+            <p class="text-center mt-2 opacity-90">Prefeitura de Guaíba - Pregão Eletrônico 71/2022</p>
+        </div>
+    </header>
+
+    <!-- Navegação entre Painéis - Movido para o topo -->
+    <div class="bg-gray-800 border-b border-gray-700 py-4">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-wrap justify-center gap-4 mb-4">
+                <button id="mainPanelBtn" onclick="showPanel('main')" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+                    🏠 Painel Principal
+                </button>
+                <button id="itinerantPanelBtn" onclick="showPanel('itinerant')" class="bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                    📡 Links Itinerantes
+                </button>
+                <button id="hotspotPanelBtn" onclick="showPanel('hotspot')" class="bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition">
+                    📶 Links de Hotspot
+                </button>
+            </div>
+            
+            <!-- Botões de Exportação -->
+            <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="exportToPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                    📄 Exportar PDF
+                </button>
+                <button onclick="exportToCSV()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    📊 Exportar CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Dashboard Principal -->
+        <div class="grid grid-cols-1 gap-6 mb-8">
+            <!-- Painel de Status -->
+            <div class="bg-gray-800 rounded-xl card-shadow p-6">
+                <h2 class="text-2xl font-semibold mb-6 text-gray-100">📊 Dashboard</h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-blue-600" id="totalLinks">0</div>
+                        <div class="text-sm text-gray-600">Links Externos</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-green-600" id="totalBandwidth">0</div>
+                        <div class="text-sm text-gray-600">Mbps Total</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-purple-600" id="concentratorCapacity">100</div>
+                        <div class="text-sm text-gray-600">Concentrador</div>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg text-center">
+                        <div class="text-lg font-bold" id="upgradeStatus">✅</div>
+                        <div class="text-sm text-gray-600">Status</div>
+                    </div>
+                </div>
+
+                <!-- Alerta de Capacidade -->
+                <div id="capacityAlert" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 alert-pulse">
+                    <strong>⚠️ Atenção:</strong> <span id="alertMessage"></span>
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+        <!-- Gerenciamento de Links -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Adicionar Link -->
+            <div class="bg-gray-800 rounded-xl card-shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-100">➕ Adicionar Link Externo</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Nome do Link</label>
+                        <input type="text" id="linkName" placeholder="Ex: Link Sede Principal" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Endereço do Local</label>
+                        <input type="text" id="linkAddress" placeholder="Ex: Rua das Flores, 123 - Centro" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Coordenadas GPS</label>
+                        <input type="text" id="linkCoordinates" placeholder="Ex: -30.1234, -51.5678" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Velocidade (Mbps)</label>
+                        <input type="number" id="linkSpeed" value="40" min="40" max="10000" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                        <div class="text-xs text-gray-400 mt-1">Mínimo: 40 Mbps | Máximo: 10.000 Mbps</div>
+                    </div>
+                    <button onclick="addLink()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition font-medium">
+                        Adicionar Link
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de Links -->
+            <div class="bg-gray-800 rounded-xl card-shadow p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-100">🔗 Links Cadastrados</h2>
+                
+                <div id="linksList" class="space-y-3">
+                    <div class="text-gray-500 text-center py-8">
+                        Nenhum link cadastrado ainda
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Painel de Links Itinerantes -->
+    <div id="itinerantPanel" class="container mx-auto px-4 py-8 hidden">
+        <!-- Header do Painel Itinerante -->
+        <div class="bg-gray-800 rounded-xl card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-100">📡 Gerenciamento de Links Itinerantes</h2>
+            <p class="text-gray-400">Gerencie links itinerantes com múltiplas conexões para atingir velocidades superiores a 100 Mbps</p>
+            
+            <!-- Resumo dos Links Itinerantes -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="totalItinerantLinks">0</div>
+                    <div class="text-sm text-gray-600">Links Itinerantes</div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="totalSubLinks">0</div>
+                    <div class="text-sm text-gray-600">Sub-Links Ativos</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-green-600" id="totalItinerantBandwidth">0</div>
+                    <div class="text-sm text-gray-600">Mbps Total</div>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-orange-600" id="activeItinerantLinks">0</div>
+                    <div class="text-sm text-gray-600">Links Ativos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adicionar Link Itinerante -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-xl card-shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-100">➕ Adicionar Link Itinerante</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Nome do Link Itinerante</label>
+                        <input type="text" id="itinerantLinkName" placeholder="Ex: Link Itinerante Evento Centro" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Localização</label>
+                        <input type="text" id="itinerantLocation" placeholder="Ex: Centro da Cidade" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Coordenadas GPS</label>
+                        <input type="text" id="itinerantCoordinates" placeholder="Ex: -30.1234, -51.5678" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-200">Período de Uso</label>
+                        <input type="text" id="itinerantPeriodInput" placeholder="Ex: 01/01/2024 a 31/12/2024" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    
+                    <!-- Configurações de Acesso -->
+                    <div class="border-t pt-4">
+                        <h4 class="font-medium mb-3 text-gray-200">🔧 Configurações de Acesso</h4>
+                        
+                        <div class="space-y-3">
+                            <div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="itinerantPublicCheck" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-200">Para uso público</span>
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="itinerantWifiCheck" onchange="toggleWifiConfig()" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-200">Necessita Wi-Fi</span>
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="itinerantLanCheck" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-200">Necessita Cabo LAN</span>
+                                </label>
+                            </div>
+                            
+                            <!-- Configuração Wi-Fi -->
+                            <div id="wifiConfig" class="hidden ml-6 space-y-2 bg-gray-700 p-3 rounded">
+                                <div>
+                                    <label class="block text-xs font-medium mb-1 text-gray-200">SSID (Nome da Rede)</label>
+                                    <input type="text" id="wifiSSID" placeholder="Ex: Prefeitura_Guaiba_Evento" 
+                                           class="w-full border border-gray-500 rounded px-2 py-1 text-sm bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1 text-gray-200">Senha</label>
+                                    <input type="password" id="wifiPassword" placeholder="Digite a senha do Wi-Fi" 
+                                           class="w-full border border-gray-500 rounded px-2 py-1 text-sm bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    <button onclick="addItinerantLink()" class="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition">
+                        Adicionar Link Itinerante
+                    </button>
+                </div>
+            </div>
+
+            <!-- Informações sobre Sub-Links -->
+            <div class="bg-gray-800 rounded-xl card-shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-100">ℹ️ Informações</h3>
+                
+                <div class="space-y-4 text-sm text-gray-400">
+                    <div class="bg-gray-700 p-3 rounded">
+                        <strong>Limite por Sub-Link:</strong> 100 Mbps
+                    </div>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <strong>Máximo de Sub-Links:</strong> 100 por link itinerante
+                    </div>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <strong>Velocidade Máxima:</strong> 10.000 Mbps (100 × 100 Mbps)
+                    </div>
+                    <div class="bg-gray-700 p-3 rounded">
+                        <strong>Como funciona:</strong> Cada link itinerante pode ter múltiplas conexões físicas que se somam para atingir velocidades superiores.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Links Itinerantes -->
+        <div class="bg-gray-800 rounded-xl card-shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-100">📡 Links Itinerantes Cadastrados</h3>
+                <div class="space-x-2">
+                    <button onclick="exportItinerantToPDF()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition text-sm">
+                        📄 PDF
+                    </button>
+                    <button onclick="exportItinerantToCSV()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm">
+                        📊 CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div id="itinerantLinksList" class="space-y-4">
+                <div class="text-gray-500 text-center py-8">
+                    Nenhum link itinerante cadastrado ainda
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel de Links de Hotspot -->
+    <div id="hotspotPanel" class="container mx-auto px-4 py-8 hidden">
+        <!-- Header do Painel Hotspot -->
+        <div class="bg-gray-800 rounded-xl card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-100">📶 Gerenciamento de Links de Hotspot</h2>
+            <p class="text-gray-400">Gerencie pontos de acesso Wi-Fi para disponibilizar internet em locais públicos</p>
+            
+            <!-- Resumo dos Links de Hotspot -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-orange-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-orange-600" id="totalHotspotLinks">0</div>
+                    <div class="text-sm text-gray-600">Links de Hotspot</div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="activeHotspotLinks">0</div>
+                    <div class="text-sm text-gray-600">Links Ativos</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-green-600" id="totalHotspotLocations">0</div>
+                    <div class="text-sm text-gray-600">Localizações</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="hotspotCoverage">0</div>
+                    <div class="text-sm text-gray-600">Cobertura (%)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adicionar Link de Hotspot -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-xl card-shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-100">➕ Adicionar Link de Hotspot</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Nome do Hotspot</label>
+                        <input type="text" id="hotspotLinkName" placeholder="Ex: Hotspot Praça Central" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Endereço do Local</label>
+                        <input type="text" id="hotspotAddress" placeholder="Ex: Praça da Matriz, s/n - Centro" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Coordenadas GPS</label>
+                        <input type="text" id="hotspotCoordinates" placeholder="Ex: -30.1234, -51.5678" 
+                               class="w-full border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none">
+                    </div>
+
+                    <button onclick="addHotspotLink()" class="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700 transition">
+                        Adicionar Hotspot
+                    </button>
+                </div>
+            </div>
+
+            <!-- Informações sobre Hotspots -->
+            <div class="bg-white rounded-xl card-shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">ℹ️ Informações sobre Hotspots</h3>
+                
+                <div class="space-y-4 text-sm text-gray-600">
+                    <div class="bg-orange-50 p-3 rounded">
+                        <strong>Finalidade:</strong> Fornecer acesso Wi-Fi gratuito em locais públicos
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded">
+                        <strong>Cobertura:</strong> 360 graus com alcance mínimo de 180 metros de raio
+                    </div>
+                    <div class="bg-green-50 p-3 rounded">
+                        <strong>Capacidade:</strong> 125 usuários (Tipo I) ou 250 usuários (Tipo II)
+                    </div>
+                    <div class="bg-yellow-50 p-3 rounded">
+                        <strong>Velocidade:</strong> 1.000 Mbps por hotspot (soma no concentrador)
+                    </div>
+                    <div class="bg-purple-50 p-3 rounded">
+                        <strong>Configuração:</strong> Rede aberta com portal de autenticação
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Links de Hotspot -->
+        <div class="bg-white rounded-xl card-shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">📶 Hotspots Cadastrados</h3>
+                <div class="space-x-2">
+                    <button onclick="exportHotspotToPDF()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition text-sm">
+                        📄 PDF
+                    </button>
+                    <button onclick="exportHotspotToCSV()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm">
+                        📊 CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div id="hotspotLinksList" class="space-y-4">
+                <div class="text-gray-500 text-center py-8">
+                    Nenhum hotspot cadastrado ainda
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let links = [];
+        let concentratorCapacity = 100;
+        let itinerantLinks = [];
+        let hotspotLinks = [];
+        let currentPanel = 'main';
+        let config = {
+            sla: 98.5,
+            redundancy: false,
+            itinerant: false,
+            itinerantSpeed: 0,
+            itinerantPeriod: '',
+            wifiPoints: 0,
+            wifiUsers: 0,
+            ipv4Block: '',
+            ipv6Block: ''
+        };
+
+        function addLink() {
+            console.log('Função addLink chamada');
+            
+            const name = document.getElementById('linkName').value.trim();
+            const address = document.getElementById('linkAddress').value.trim();
+            const coordinates = document.getElementById('linkCoordinates').value.trim();
+            const speed = parseInt(document.getElementById('linkSpeed').value);
+
+            console.log('Valores capturados:', { name, address, coordinates, speed });
+
+            if (!name || !address || !speed || speed < 40 || speed > 10000) {
+                alert('Por favor, preencha todos os campos obrigatórios. A velocidade deve estar entre 40 e 10.000 Mbps.');
+                return;
+            }
+
+            const currentDate = new Date().toLocaleDateString('pt-BR');
+
+            const link = {
+                id: Date.now(),
+                name: name,
+                address: address,
+                coordinates: coordinates,
+                speed: speed,
+                dateCreated: currentDate
+            };
+
+            console.log('Link criado:', link);
+
+            links.push(link);
+            console.log('Array links após adicionar:', links);
+            
+            updateDisplay();
+            clearForm();
+            
+            // Mostrar mensagem de sucesso
+            alert(`Link "${name}" adicionado com sucesso!`);
+        }
+
+        function removeLink(id) {
+            links = links.filter(link => link.id !== id);
+            updateDisplay();
+        }
+
+        function saveLink(id) {
+            const speedInput = document.getElementById(`speed-${id}`);
+            const newSpeed = parseInt(speedInput.value);
+            
+            if (newSpeed < 40 || newSpeed > 10000) {
+                alert('A velocidade deve estar entre 40 e 10.000 Mbps.');
+                return;
+            }
+            
+            const link = links.find(l => l.id === id);
+            if (link) {
+                link.speed = newSpeed;
+                updateDisplay();
+                alert(`Velocidade do link "${link.name}" atualizada para ${newSpeed} Mbps!`);
+            }
+        }
+
+        function updateDisplay() {
+            const totalLinks = links.length;
+            const externalBandwidth = links.reduce((sum, link) => sum + link.speed, 0);
+            const hotspotBandwidth = hotspotLinks.filter(link => link.isActive).reduce((sum, link) => sum + link.speed, 0);
+            const itinerantBandwidth = itinerantLinks.reduce((sum, link) => 
+                link.isActive ? sum + link.subLinks.filter(sl => sl.enabled).reduce((subSum, sl) => subSum + sl.speed, 0) : sum, 0);
+            const totalBandwidth = externalBandwidth + hotspotBandwidth + itinerantBandwidth;
+            
+            // Ajustar automaticamente o concentrador para a próxima capacidade disponível
+            if (totalBandwidth > 0) {
+                // Encontrar a menor capacidade que atende a demanda
+                const availableCapacities = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
+                const requiredCapacity = availableCapacities.find(capacity => capacity >= totalBandwidth);
+                
+                if (requiredCapacity) {
+                    concentratorCapacity = requiredCapacity;
+                } else {
+                    // Se exceder 10000 Mbps, manter em 10000 e mostrar alerta
+                    concentratorCapacity = 10000;
+                }
+            } else {
+                // Se não há links, manter capacidade mínima
+                concentratorCapacity = 100;
+            }
+            
+            document.getElementById('totalLinks').textContent = totalLinks;
+            document.getElementById('totalBandwidth').textContent = totalBandwidth;
+            document.getElementById('concentratorCapacity').textContent = concentratorCapacity;
+
+            // Verificar se precisa de upgrade (apenas se exceder 10000 Mbps)
+            const needsUpgrade = totalBandwidth > 10000;
+            const upgradeStatus = document.getElementById('upgradeStatus');
+            const capacityAlert = document.getElementById('capacityAlert');
+            const alertMessage = document.getElementById('alertMessage');
+
+            if (needsUpgrade) {
+                upgradeStatus.textContent = '⚠️';
+                upgradeStatus.className = 'text-lg font-bold text-red-600';
+                capacityAlert.classList.remove('hidden');
+                alertMessage.textContent = `A demanda total (${totalBandwidth} Mbps) excede a capacidade máxima do sistema (10.000 Mbps). Necessário expandir infraestrutura.`;
+            } else if (totalBandwidth > 0) {
+                upgradeStatus.textContent = '✅';
+                upgradeStatus.className = 'text-lg font-bold text-green-600';
+                capacityAlert.classList.add('hidden');
+            } else {
+                upgradeStatus.textContent = '➖';
+                upgradeStatus.className = 'text-lg font-bold text-gray-400';
+                capacityAlert.classList.add('hidden');
+            }
+
+            updateLinksList();
+        }
+
+        function updateLinksList() {
+            const linksList = document.getElementById('linksList');
+            
+            if (links.length === 0) {
+                linksList.innerHTML = '<div class="text-gray-400 text-center py-8">Nenhum link cadastrado ainda</div>';
+                return;
+            }
+
+            linksList.innerHTML = links.map(link => `
+                <div class="border border-gray-600 rounded-lg p-4 bg-gray-700">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-grow">
+                            <h4 class="font-medium text-lg text-gray-100">${link.name}</h4>
+                            <p class="text-sm text-gray-300 mt-1">📍 ${link.address}</p>
+                            ${link.coordinates ? `<p class="text-sm text-gray-300">🌐 ${link.coordinates}</p>` : ''}
+                            <p class="text-sm text-gray-300">📅 Cadastrado em: ${link.dateCreated}</p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="text-sm text-gray-300">Velocidade:</span>
+                                <input type="number" value="${link.speed}" min="40" max="10000" 
+                                       id="speed-${link.id}"
+                                       class="w-20 border border-gray-500 rounded px-2 py-1 text-sm bg-gray-600 text-white focus:border-blue-400 focus:outline-none">
+                                <span class="text-sm text-gray-300">Mbps</span>
+                                <button onclick="saveLink(${link.id})" 
+                                        class="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition">
+                                    💾 Salvar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2 ml-4">
+                            <button onclick="exportLinkToPDF(${link.id})" 
+                                    class="px-3 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 transition">
+                                📄 PDF
+                            </button>
+                            <button onclick="removeLink(${link.id})" 
+                                    class="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition">
+                                🗑️ Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Função removida - concentrador agora é automático
+
+        function updateSLA() {
+            const sla = parseFloat(document.getElementById('slaInput').value);
+            config.sla = sla;
+            
+            const slaAlert = document.getElementById('slaAlert');
+            if (sla < 98.5) {
+                slaAlert.classList.remove('hidden');
+            } else {
+                slaAlert.classList.add('hidden');
+            }
+        }
+
+        function updateRedundancy() {
+            config.redundancy = document.getElementById('redundancyCheck').checked;
+        }
+
+        function toggleItinerant() {
+            const isChecked = document.getElementById('itinerantCheck').checked;
+            config.itinerant = isChecked;
+            
+            const itinerantConfig = document.getElementById('itinerantConfig');
+            if (isChecked) {
+                itinerantConfig.classList.remove('hidden');
+            } else {
+                itinerantConfig.classList.add('hidden');
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('linkName').value = '';
+            document.getElementById('linkAddress').value = '';
+            document.getElementById('linkCoordinates').value = '';
+            document.getElementById('linkSpeed').value = '40';
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Relatório de Links - Prefeitura de Guaíba', 20, 20);
+            doc.setFontSize(12);
+            doc.text('Pregão Eletrônico 71/2022', 20, 30);
+            
+            let y = 50;
+            
+            // Resumo
+            doc.text(`Total de Links: ${links.length}`, 20, y);
+            y += 10;
+            doc.text(`Banda Total: ${links.reduce((sum, link) => sum + link.speed, 0)} Mbps`, 20, y);
+            y += 10;
+            doc.text(`Concentrador: ${concentratorCapacity} Mbps`, 20, y);
+            y += 20;
+            
+            // Links
+            doc.text('Links Cadastrados:', 20, y);
+            y += 10;
+            
+            links.forEach(link => {
+                doc.text(`• ${link.name}: ${link.speed} Mbps`, 25, y);
+                y += 8;
+            });
+            
+            y += 10;
+            
+            // Configurações
+            doc.text('Configurações:', 20, y);
+            y += 10;
+            doc.text(`SLA: ${config.sla}%`, 25, y);
+            y += 8;
+            doc.text(`Redundância: ${config.redundancy ? 'Ativa' : 'Inativa'}`, 25, y);
+            y += 8;
+            doc.text(`Link Itinerante: ${config.itinerant ? 'Ativo' : 'Inativo'}`, 25, y);
+            
+            doc.save('relatorio-links-guaiba.pdf');
+        }
+
+        function exportToCSV() {
+            let csv = 'Nome do Link,Velocidade (Mbps)\n';
+            links.forEach(link => {
+                csv += `"${link.name}",${link.speed}\n`;
+            });
+            
+            csv += '\nResumo:\n';
+            csv += `Total de Links,${links.length}\n`;
+            csv += `Banda Total,${links.reduce((sum, link) => sum + link.speed, 0)}\n`;
+            csv += `Concentrador,${concentratorCapacity}\n`;
+            csv += `SLA,${config.sla}%\n`;
+            csv += `Redundância,${config.redundancy ? 'Ativa' : 'Inativa'}\n`;
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'links-guaiba.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Funções de Navegação entre Painéis
+        function showPanel(panel) {
+            const mainPanel = document.querySelector('.container');
+            const itinerantPanel = document.getElementById('itinerantPanel');
+            const hotspotPanel = document.getElementById('hotspotPanel');
+            const mainBtn = document.getElementById('mainPanelBtn');
+            const itinerantBtn = document.getElementById('itinerantPanelBtn');
+            const hotspotBtn = document.getElementById('hotspotPanelBtn');
+
+            // Esconder todos os painéis
+            mainPanel.classList.add('hidden');
+            itinerantPanel.classList.add('hidden');
+            hotspotPanel.classList.add('hidden');
+
+            // Resetar cores dos botões
+            mainBtn.classList.remove('bg-blue-600');
+            mainBtn.classList.add('bg-gray-400');
+            itinerantBtn.classList.remove('bg-purple-600');
+            itinerantBtn.classList.add('bg-gray-400');
+            hotspotBtn.classList.remove('bg-orange-600');
+            hotspotBtn.classList.add('bg-gray-400');
+
+            if (panel === 'main') {
+                mainPanel.classList.remove('hidden');
+                mainBtn.classList.add('bg-blue-600');
+                mainBtn.classList.remove('bg-gray-400');
+                currentPanel = 'main';
+            } else if (panel === 'itinerant') {
+                itinerantPanel.classList.remove('hidden');
+                itinerantBtn.classList.add('bg-purple-600');
+                itinerantBtn.classList.remove('bg-gray-400');
+                currentPanel = 'itinerant';
+                updateItinerantDisplay();
+            } else if (panel === 'hotspot') {
+                hotspotPanel.classList.remove('hidden');
+                hotspotBtn.classList.add('bg-orange-600');
+                hotspotBtn.classList.remove('bg-gray-400');
+                currentPanel = 'hotspot';
+                updateHotspotDisplay();
+            }
+        }
+
+        // Funções para Links Itinerantes
+        function addItinerantLink() {
+            const name = document.getElementById('itinerantLinkName').value.trim();
+            const location = document.getElementById('itinerantLocation').value.trim();
+            const coordinates = document.getElementById('itinerantCoordinates').value.trim();
+            const period = document.getElementById('itinerantPeriodInput').value.trim();
+            const isActive = true;
+            const isPublic = document.getElementById('itinerantPublicCheck').checked;
+            const needsWifi = document.getElementById('itinerantWifiCheck').checked;
+            const needsLan = document.getElementById('itinerantLanCheck').checked;
+            const wifiSSID = document.getElementById('wifiSSID').value.trim();
+            const wifiPassword = document.getElementById('wifiPassword').value.trim();
+
+            if (!name || !location || !period) {
+                alert('Por favor, preencha todos os campos obrigatórios.');
+                return;
+            }
+
+            if (needsWifi && (!wifiSSID || !wifiPassword)) {
+                alert('Por favor, preencha o SSID e senha do Wi-Fi.');
+                return;
+            }
+
+            const itinerantLink = {
+                id: Date.now(),
+                name: name,
+                location: location,
+                coordinates: coordinates,
+                period: period,
+                isActive: isActive,
+                isPublic: isPublic,
+                needsWifi: needsWifi,
+                needsLan: needsLan,
+                wifiSSID: wifiSSID,
+                wifiPassword: wifiPassword,
+                subLinks: Array.from({length: 100}, (_, i) => ({
+                    id: i + 1,
+                    name: `Sub-Link ${i + 1}`,
+                    speed: 100,
+                    enabled: false
+                }))
+            };
+
+            itinerantLinks.push(itinerantLink);
+            updateItinerantDisplay();
+            clearItinerantForm();
+        }
+
+        function removeItinerantLink(id) {
+            itinerantLinks = itinerantLinks.filter(link => link.id !== id);
+            updateItinerantDisplay();
+        }
+
+        function toggleWifiConfig() {
+            const isChecked = document.getElementById('itinerantWifiCheck').checked;
+            const wifiConfig = document.getElementById('wifiConfig');
+            
+            if (isChecked) {
+                wifiConfig.classList.remove('hidden');
+            } else {
+                wifiConfig.classList.add('hidden');
+                // Limpar campos quando desabilitado
+                document.getElementById('wifiSSID').value = '';
+                document.getElementById('wifiPassword').value = '';
+            }
+        }
+
+        function toggleItinerantLink(id) {
+            const link = itinerantLinks.find(l => l.id === id);
+            if (link) {
+                link.isActive = !link.isActive;
+                updateItinerantDisplay();
+            }
+        }
+
+        function saveItinerantLink(linkId) {
+            const sublinkSelect = document.getElementById(`sublinks-${linkId}`);
+            const quantity = parseInt(sublinkSelect.value);
+            
+            const link = itinerantLinks.find(l => l.id === linkId);
+            if (link) {
+                // Desativar todos os sub-links primeiro
+                link.subLinks.forEach(sl => sl.enabled = false);
+                
+                // Ativar a quantidade selecionada
+                for (let i = 0; i < quantity && i < link.subLinks.length; i++) {
+                    link.subLinks[i].enabled = true;
+                }
+                
+                const totalBandwidth = quantity * 1000;
+                updateItinerantDisplay();
+                updateDisplay(); // Atualizar o concentrador principal
+                alert(`Link itinerante "${link.name}" atualizado para ${quantity} sub-links (${totalBandwidth} Mbps)!`);
+            }
+        }
+
+        function updateItinerantDisplay() {
+            const totalItinerantLinks = itinerantLinks.length;
+            const activeItinerantLinks = itinerantLinks.filter(link => link.isActive).length;
+            const totalSubLinks = itinerantLinks.reduce((sum, link) => 
+                sum + link.subLinks.filter(sl => sl.enabled).length, 0);
+            const totalItinerantBandwidth = itinerantLinks.reduce((sum, link) => 
+                link.isActive ? sum + link.subLinks.filter(sl => sl.enabled).reduce((subSum, sl) => subSum + sl.speed, 0) : sum, 0);
+
+            document.getElementById('totalItinerantLinks').textContent = totalItinerantLinks;
+            document.getElementById('activeItinerantLinks').textContent = activeItinerantLinks;
+            document.getElementById('totalSubLinks').textContent = totalSubLinks;
+            document.getElementById('totalItinerantBandwidth').textContent = totalItinerantBandwidth;
+
+            updateItinerantLinksList();
+        }
+
+        function updateItinerantLinksList() {
+            const itinerantLinksList = document.getElementById('itinerantLinksList');
+            
+            if (itinerantLinks.length === 0) {
+                itinerantLinksList.innerHTML = '<div class="text-gray-500 text-center py-8">Nenhum link itinerante cadastrado ainda</div>';
+                return;
+            }
+
+            itinerantLinksList.innerHTML = itinerantLinks.map(link => {
+                const activeSubLinks = link.subLinks.filter(sl => sl.enabled).length;
+                const totalBandwidth = link.subLinks.filter(sl => sl.enabled).reduce((sum, sl) => sum + sl.speed, 0);
+                
+                return `
+                    <div class="border rounded-lg p-6 ${link.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-grow">
+                                <h4 class="text-lg font-semibold">${link.name}</h4>
+                                <p class="text-sm text-gray-600">📍 ${link.location}</p>
+                                ${link.coordinates ? `<p class="text-sm text-gray-600">🌐 ${link.coordinates}</p>` : ''}
+                                <p class="text-sm text-gray-600">📅 ${link.period}</p>
+                                
+                                <div class="mt-2 space-y-1">
+                                    <div>
+                                        <span class="inline-block px-2 py-1 text-xs rounded ${link.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                            ${link.isActive ? '✅ Ativo' : '⏸️ Inativo'}
+                                        </span>
+                                        <span class="inline-block px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 ml-2">
+                                            ${activeSubLinks}/100 Sub-Links
+                                        </span>
+                                        <span class="inline-block px-2 py-1 text-xs rounded bg-purple-100 text-purple-800 ml-2">
+                                            ${totalBandwidth} Mbps
+                                        </span>
+                                    </div>
+                                    <div>
+                                        ${link.isPublic ? '<span class="inline-block px-2 py-1 text-xs rounded bg-orange-100 text-orange-800">👥 Público</span>' : '<span class="inline-block px-2 py-1 text-xs rounded bg-gray-100 text-gray-600">🔒 Privado</span>'}
+                                        ${link.needsWifi ? `<span class="inline-block px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 ml-2">📶 Wi-Fi: ${link.wifiSSID}</span>` : ''}
+                                        ${link.needsLan ? '<span class="inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-800 ml-2">🔌 Cabo LAN</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-2 ml-4">
+                                <button onclick="exportItinerantLinkToPDF(${link.id})" 
+                                        class="px-3 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 transition">
+                                    📄 PDF
+                                </button>
+                                <button onclick="toggleItinerantLink(${link.id})" 
+                                        class="px-3 py-1 text-xs rounded transition ${link.isActive ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-green-500 text-white hover:bg-green-600'}">
+                                    ${link.isActive ? '⏸️ Desativar' : '▶️ Ativar'}
+                                </button>
+                                <button onclick="removeItinerantLink(${link.id})" 
+                                        class="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition">
+                                    🗑️ Excluir
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t pt-4">
+                            <h5 class="font-medium mb-3 text-gray-200">Configuração de Sub-Links:</h5>
+                            <div class="bg-gray-700 p-4 rounded-lg">
+                                <div class="flex items-center gap-4 mb-3">
+                                    <label class="text-sm font-medium text-gray-200">Quantidade de Sub-Links Ativos:</label>
+                                    <select id="sublinks-${link.id}" class="border border-gray-500 rounded px-3 py-2 bg-gray-700 text-white min-w-[120px] focus:border-blue-400 focus:outline-none">
+                                        ${Array.from({length: 101}, (_, i) => `<option value="${i}" ${activeSubLinks === i ? 'selected' : ''}>${i} Sub-Links</option>`).join('')}
+                                    </select>
+                                    <span class="text-sm text-gray-200">= ${totalBandwidth} Mbps</span>
+                                    <button onclick="saveItinerantLink(${link.id})" 
+                                            class="px-3 py-1 text-xs rounded bg-green-500 text-white hover:bg-green-600 transition">
+                                        💾 Salvar
+                                    </button>
+                                </div>
+                                
+                                <!-- Visualização dos Sub-Links -->
+                                <div class="bg-gray-600 p-3 rounded mt-3">
+                                    <div class="text-xs text-gray-300 mb-2">
+                                        Sub-Links Ativos: ${activeSubLinks}/100 (cada sub-link = 100 Mbps)
+                                    </div>
+                                    <div class="w-full bg-gray-500 rounded-full h-2">
+                                        <div class="bg-green-500 h-2 rounded-full" style="width: ${(activeSubLinks / 100) * 100}%"></div>
+                                    </div>
+                                    <div class="text-xs text-gray-300 mt-1">
+                                        ${activeSubLinks > 0 ? `${activeSubLinks} × 100 Mbps = ${totalBandwidth} Mbps` : 'Nenhum sub-link ativo'}
+                                    </div>
+                                </div>
+                                
+                                <div class="text-xs text-gray-300 mt-2">
+                                    Cada sub-link fornece 100 Mbps. Selecione quantos deseja ativar (máximo: 100).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function clearItinerantForm() {
+            document.getElementById('itinerantLinkName').value = '';
+            document.getElementById('itinerantLocation').value = '';
+            document.getElementById('itinerantCoordinates').value = '';
+            document.getElementById('itinerantPeriodInput').value = '';
+
+            document.getElementById('itinerantPublicCheck').checked = false;
+            document.getElementById('itinerantWifiCheck').checked = false;
+            document.getElementById('itinerantLanCheck').checked = false;
+            document.getElementById('wifiSSID').value = '';
+            document.getElementById('wifiPassword').value = '';
+            document.getElementById('wifiConfig').classList.add('hidden');
+        }
+
+        function exportItinerantToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Relatório de Links Itinerantes - Prefeitura de Guaíba', 20, 20);
+            doc.setFontSize(12);
+            doc.text('Pregão Eletrônico 71/2022', 20, 30);
+            
+            let y = 50;
+            
+            // Resumo
+            const totalItinerantLinks = itinerantLinks.length;
+            const activeItinerantLinks = itinerantLinks.filter(link => link.isActive).length;
+            const totalSubLinks = itinerantLinks.reduce((sum, link) => 
+                sum + link.subLinks.filter(sl => sl.enabled).length, 0);
+            const totalItinerantBandwidth = itinerantLinks.reduce((sum, link) => 
+                link.isActive ? sum + link.subLinks.filter(sl => sl.enabled).reduce((subSum, sl) => subSum + sl.speed, 0) : sum, 0);
+            
+            doc.text(`Total de Links Itinerantes: ${totalItinerantLinks}`, 20, y);
+            y += 10;
+            doc.text(`Links Ativos: ${activeItinerantLinks}`, 20, y);
+            y += 10;
+            doc.text(`Sub-Links Ativos: ${totalSubLinks}`, 20, y);
+            y += 10;
+            doc.text(`Banda Total: ${totalItinerantBandwidth} Mbps`, 20, y);
+            y += 20;
+            
+            // Links Itinerantes
+            doc.text('Links Itinerantes Cadastrados:', 20, y);
+            y += 10;
+            
+            itinerantLinks.forEach(link => {
+                const activeSubLinks = link.subLinks.filter(sl => sl.enabled).length;
+                const totalBandwidth = link.subLinks.filter(sl => sl.enabled).reduce((sum, sl) => sum + sl.speed, 0);
+                
+                doc.text(`• ${link.name}`, 25, y);
+                y += 8;
+                doc.text(`  Local: ${link.location}`, 30, y);
+                y += 6;
+                if (link.coordinates) {
+                    doc.text(`  Coordenadas: ${link.coordinates}`, 30, y);
+                    y += 6;
+                }
+                doc.text(`  Período: ${link.period}`, 30, y);
+                y += 6;
+                doc.text(`  Status: ${link.isActive ? 'Ativo' : 'Inativo'}`, 30, y);
+                y += 6;
+                doc.text(`  Acesso: ${link.isPublic ? 'Público' : 'Privado'}`, 30, y);
+                y += 6;
+                if (link.needsWifi) {
+                    doc.text(`  Wi-Fi: ${link.wifiSSID}`, 30, y);
+                    y += 6;
+                }
+                doc.text(`  Sub-Links: ${activeSubLinks}/100 (${totalBandwidth} Mbps)`, 30, y);
+                y += 10;
+                
+                if (y > 250) {
+                    doc.addPage();
+                    y = 20;
+                }
+            });
+            
+            doc.save('relatorio-links-itinerantes-guaiba.pdf');
+        }
+
+        function exportItinerantToCSV() {
+            let csv = 'Nome,Localização,Coordenadas,Período,Status,Acesso,Wi-Fi,SSID,Cabo LAN,Sub-Links Ativos,Velocidade Total (Mbps)\n';
+            
+            itinerantLinks.forEach(link => {
+                const activeSubLinks = link.subLinks.filter(sl => sl.enabled).length;
+                const totalBandwidth = link.subLinks.filter(sl => sl.enabled).reduce((sum, sl) => sum + sl.speed, 0);
+                
+                csv += `"${link.name}","${link.location}","${link.coordinates || ''}","${link.period}","${link.isActive ? 'Ativo' : 'Inativo'}","${link.isPublic ? 'Público' : 'Privado'}","${link.needsWifi ? 'Sim' : 'Não'}","${link.wifiSSID || ''}","${link.needsLan ? 'Sim' : 'Não'}",${activeSubLinks},${totalBandwidth}\n`;
+            });
+            
+            csv += '\nResumo:\n';
+            csv += `Total de Links Itinerantes,${itinerantLinks.length}\n`;
+            csv += `Links Ativos,${itinerantLinks.filter(link => link.isActive).length}\n`;
+            csv += `Sub-Links Ativos,${itinerantLinks.reduce((sum, link) => sum + link.subLinks.filter(sl => sl.enabled).length, 0)}\n`;
+            csv += `Banda Total,${itinerantLinks.reduce((sum, link) => link.isActive ? sum + link.subLinks.filter(sl => sl.enabled).reduce((subSum, sl) => subSum + sl.speed, 0) : sum, 0)}\n`;
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'links-itinerantes-guaiba.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportLinkToPDF(linkId) {
+            const link = links.find(l => l.id === linkId);
+            if (!link) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Relatório de Link Externo - Prefeitura de Guaíba', 20, 20);
+            doc.setFontSize(12);
+            doc.text('Pregão Eletrônico 71/2022', 20, 30);
+            
+            let y = 50;
+            
+            // Informações do Link
+            doc.setFontSize(14);
+            doc.text('Informações do Link:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text(`Nome: ${link.name}`, 25, y);
+            y += 10;
+            doc.text(`Endereço: ${link.address}`, 25, y);
+            y += 10;
+            if (link.coordinates) {
+                doc.text(`Coordenadas: ${link.coordinates}`, 25, y);
+                y += 10;
+            }
+            doc.text(`Velocidade: ${link.speed} Mbps`, 25, y);
+            y += 10;
+            doc.text(`Data de Cadastro: ${link.dateCreated}`, 25, y);
+            y += 20;
+            
+            // Equipamentos
+            doc.setFontSize(14);
+            doc.text('Equipamentos Necessários:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text('• PONTO COM NOBREAK', 25, y);
+            y += 10;
+            doc.text('• MIKROTIK', 25, y);
+            y += 10;
+            doc.text('• ONU', 25, y);
+            y += 10;
+            doc.text('• RACK', 25, y);
+            y += 20;
+            
+            // Observações
+            doc.setFontSize(14);
+            doc.text('Observações:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text('Este link externo foi configurado conforme especificações', 25, y);
+            y += 8;
+            doc.text('do Pregão Eletrônico 71/2022 da Prefeitura de Guaíba.', 25, y);
+            y += 8;
+            doc.text('Todos os equipamentos listados são obrigatórios para', 25, y);
+            y += 8;
+            doc.text('o funcionamento adequado do link.', 25, y);
+            
+            doc.save(`link-externo-${link.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+        }
+
+        function exportItinerantLinkToPDF(linkId) {
+            const link = itinerantLinks.find(l => l.id === linkId);
+            if (!link) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const activeSubLinks = link.subLinks.filter(sl => sl.enabled).length;
+            const totalBandwidth = link.subLinks.filter(sl => sl.enabled).reduce((sum, sl) => sum + sl.speed, 0);
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Relatório de Link Itinerante - Prefeitura de Guaíba', 20, 20);
+            doc.setFontSize(12);
+            doc.text('Pregão Eletrônico 71/2022', 20, 30);
+            
+            let y = 50;
+            
+            // Informações do Link
+            doc.setFontSize(14);
+            doc.text('Informações do Link Itinerante:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text(`Nome: ${link.name}`, 25, y);
+            y += 10;
+            doc.text(`Localização: ${link.location}`, 25, y);
+            y += 10;
+            if (link.coordinates) {
+                doc.text(`Coordenadas: ${link.coordinates}`, 25, y);
+                y += 10;
+            }
+            doc.text(`Período: ${link.period}`, 25, y);
+            y += 10;
+            doc.text(`Status: ${link.isActive ? 'Ativo' : 'Inativo'}`, 25, y);
+            y += 10;
+            doc.text(`Acesso: ${link.isPublic ? 'Público' : 'Privado'}`, 25, y);
+            y += 10;
+            
+            if (link.needsWifi) {
+                doc.text(`Wi-Fi: Sim`, 25, y);
+                y += 8;
+                doc.text(`SSID: ${link.wifiSSID}`, 30, y);
+                y += 8;
+                doc.text(`Senha: ${link.wifiPassword}`, 30, y);
+                y += 10;
+            } else {
+                doc.text('Wi-Fi: Não', 25, y);
+                y += 10;
+            }
+            
+            doc.text(`Cabo LAN: ${link.needsLan ? 'Sim' : 'Não'}`, 25, y);
+            y += 15;
+            
+            // Configuração de Sub-Links
+            doc.setFontSize(14);
+            doc.text('Configuração de Sub-Links:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text(`Sub-Links Ativos: ${activeSubLinks}/100`, 25, y);
+            y += 10;
+            doc.text(`Velocidade Total: ${totalBandwidth} Mbps`, 25, y);
+            y += 10;
+            doc.text('Cada sub-link fornece 100 Mbps', 25, y);
+            y += 20;
+            
+            // Valor de Cobrança
+            doc.setFontSize(14);
+            doc.text('Valor de Cobrança:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text(`Quantidade de Links Unificados: ${activeSubLinks}`, 25, y);
+            y += 10;
+            doc.text(`Valor será cobrado com base na quantidade de links ativos`, 25, y);
+            y += 8;
+            doc.text(`conforme especificado no contrato do Pregão 71/2022.`, 25, y);
+            
+            doc.save(`link-itinerante-${link.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+        }
+
+        // Funções para Links de Hotspot
+        function addHotspotLink() {
+            const name = document.getElementById('hotspotLinkName').value.trim();
+            const address = document.getElementById('hotspotAddress').value.trim();
+            const coordinates = document.getElementById('hotspotCoordinates').value.trim();
+
+            if (!name || !address || !coordinates) {
+                alert('Por favor, preencha todos os campos obrigatórios.');
+                return;
+            }
+
+            const currentDate = new Date().toLocaleDateString('pt-BR');
+
+            const hotspotLink = {
+                id: Date.now(),
+                name: name,
+                address: address,
+                coordinates: coordinates,
+                dateCreated: currentDate,
+                isActive: true,
+                speed: 1000 // Cada hotspot tem 1000 Mbps
+            };
+
+            hotspotLinks.push(hotspotLink);
+            updateHotspotDisplay();
+            updateDisplay(); // Atualizar o concentrador principal também
+            clearHotspotForm();
+        }
+
+        function removeHotspotLink(id) {
+            hotspotLinks = hotspotLinks.filter(link => link.id !== id);
+            updateHotspotDisplay();
+            updateDisplay(); // Atualizar o concentrador principal também
+        }
+
+        function toggleHotspotLink(id) {
+            const link = hotspotLinks.find(l => l.id === id);
+            if (link) {
+                link.isActive = !link.isActive;
+                updateHotspotDisplay();
+                updateDisplay(); // Atualizar o concentrador principal também
+            }
+        }
+
+        function updateHotspotDisplay() {
+            const totalHotspotLinks = hotspotLinks.length;
+            const activeHotspotLinks = hotspotLinks.filter(link => link.isActive).length;
+            const totalHotspotLocations = hotspotLinks.length; // Cada hotspot é uma localização
+            const hotspotCoverage = totalHotspotLinks > 0 ? Math.round((activeHotspotLinks / totalHotspotLinks) * 100) : 0;
+
+            document.getElementById('totalHotspotLinks').textContent = totalHotspotLinks;
+            document.getElementById('activeHotspotLinks').textContent = activeHotspotLinks;
+            document.getElementById('totalHotspotLocations').textContent = totalHotspotLocations;
+            document.getElementById('hotspotCoverage').textContent = hotspotCoverage;
+
+            updateHotspotLinksList();
+        }
+
+        function updateHotspotLinksList() {
+            const hotspotLinksList = document.getElementById('hotspotLinksList');
+            
+            if (hotspotLinks.length === 0) {
+                hotspotLinksList.innerHTML = '<div class="text-gray-500 text-center py-8">Nenhum hotspot cadastrado ainda</div>';
+                return;
+            }
+
+            hotspotLinksList.innerHTML = hotspotLinks.map(link => `
+                <div class="border rounded-lg p-6 ${link.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-grow">
+                            <h4 class="text-lg font-semibold">${link.name}</h4>
+                            <p class="text-sm text-gray-600 mt-1">📍 ${link.address}</p>
+                            <p class="text-sm text-gray-600">🌐 ${link.coordinates}</p>
+                            <p class="text-sm text-gray-600">📅 Cadastrado em: ${link.dateCreated}</p>
+                            
+                            <div class="mt-2">
+                                <span class="inline-block px-2 py-1 text-xs rounded ${link.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                    ${link.isActive ? '✅ Ativo' : '⏸️ Inativo'}
+                                </span>
+                                <span class="inline-block px-2 py-1 text-xs rounded bg-orange-100 text-orange-800 ml-2">
+                                    📶 Wi-Fi Público
+                                </span>
+                                <span class="inline-block px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 ml-2">
+                                    👥 125-250 usuários
+                                </span>
+                                <span class="inline-block px-2 py-1 text-xs rounded bg-purple-100 text-purple-800 ml-2">
+                                    ⚡ 1.000 Mbps
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2 ml-4">
+                            <button onclick="exportHotspotLinkToPDF(${link.id})" 
+                                    class="px-3 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 transition">
+                                📄 PDF
+                            </button>
+                            <button onclick="toggleHotspotLink(${link.id})" 
+                                    class="px-3 py-1 text-xs rounded transition ${link.isActive ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-green-500 text-white hover:bg-green-600'}">
+                                ${link.isActive ? '⏸️ Desativar' : '▶️ Ativar'}
+                            </button>
+                            <button onclick="removeHotspotLink(${link.id})" 
+                                    class="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 transition">
+                                🗑️ Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearHotspotForm() {
+            document.getElementById('hotspotLinkName').value = '';
+            document.getElementById('hotspotAddress').value = '';
+            document.getElementById('hotspotCoordinates').value = '';
+        }
+
+        function exportHotspotToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Relatório de Links de Hotspot - Prefeitura de Guaíba', 20, 20);
+            doc.setFontSize(12);
+            doc.text('Pregão Eletrônico 71/2022', 20, 30);
+            
+            let y = 50;
+            
+            // Resumo
+            const totalHotspotLinks = hotspotLinks.length;
+            const activeHotspotLinks = hotspotLinks.filter(link => link.isActive).length;
+            const hotspotCoverage = totalHotspotLinks > 0 ? Math.round((activeHotspotLinks / totalHotspotLinks) * 100) : 0;
+            
+            doc.text(`Total de Hotspots: ${totalHotspotLinks}`, 20, y);
+            y += 10;
+            doc.text(`Hotspots Ativos: ${activeHotspotLinks}`, 20, y);
+            y += 10;
+            doc.text(`Cobertura: ${hotspotCoverage}%`, 20, y);
+            y += 20;
+            
+            // Hotspots
+            doc.text('Hotspots Cadastrados:', 20, y);
+            y += 10;
+            
+            hotspotLinks.forEach(link => {
+                doc.text(`• ${link.name}`, 25, y);
+                y += 8;
+                doc.text(`  Endereço: ${link.address}`, 30, y);
+                y += 6;
+                doc.text(`  Coordenadas: ${link.coordinates}`, 30, y);
+                y += 6;
+                doc.text(`  Status: ${link.isActive ? 'Ativo' : 'Inativo'}`, 30, y);
+                y += 6;
+                doc.text(`  Data: ${link.dateCreated}`, 30, y);
+                y += 10;
+                
+                if (y > 250) {
+                    doc.addPage();
+                    y = 20;
+                }
+            });
+            
+            doc.save('relatorio-hotspots-guaiba.pdf');
+        }
+
+        function exportHotspotToCSV() {
+            let csv = 'Nome,Endereço,Coordenadas,Status,Data de Cadastro\n';
+            
+            hotspotLinks.forEach(link => {
+                csv += `"${link.name}","${link.address}","${link.coordinates}","${link.isActive ? 'Ativo' : 'Inativo'}","${link.dateCreated}"\n`;
+            });
+            
+            csv += '\nResumo:\n';
+            csv += `Total de Hotspots,${hotspotLinks.length}\n`;
+            csv += `Hotspots Ativos,${hotspotLinks.filter(link => link.isActive).length}\n`;
+            csv += `Cobertura,${hotspotLinks.length > 0 ? Math.round((hotspotLinks.filter(link => link.isActive).length / hotspotLinks.length) * 100) : 0}%\n`;
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hotspots-guaiba.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportHotspotLinkToPDF(linkId) {
+            const link = hotspotLinks.find(l => l.id === linkId);
+            if (!link) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(16);
+            doc.text('Relatório de Hotspot - Prefeitura de Guaíba', 20, 20);
+            doc.setFontSize(12);
+            doc.text('Pregão Eletrônico 71/2022', 20, 30);
+            
+            let y = 50;
+            
+            // Informações do Hotspot
+            doc.setFontSize(14);
+            doc.text('Informações do Hotspot:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text(`Nome: ${link.name}`, 25, y);
+            y += 10;
+            doc.text(`Endereço: ${link.address}`, 25, y);
+            y += 10;
+            doc.text(`Coordenadas: ${link.coordinates}`, 25, y);
+            y += 10;
+            doc.text(`Data de Cadastro: ${link.dateCreated}`, 25, y);
+            y += 10;
+            doc.text(`Velocidade: 1.000 Mbps`, 25, y);
+            y += 20;
+            
+            doc.text('Área de cobertura 360 graus, com alcance mínimo de', 25, y);
+            y += 8;
+            doc.text('180 metros de raio.', 25, y);
+            y += 15;
+            
+            doc.text('Suporte para no mínimo 125 acessos simultâneos', 25, y);
+            y += 8;
+            doc.text('(Hotspot Tipo I) e 250 acessos simultâneos', 25, y);
+            y += 8;
+            doc.text('(Hotspot Tipo II).', 25, y);
+            y += 20;
+            
+            // Equipamentos
+            doc.setFontSize(14);
+            doc.text('Equipamentos Necessários:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text('• Access Point Wi-Fi', 25, y);
+            y += 10;
+            doc.text('• Controlador de Rede', 25, y);
+            y += 10;
+            doc.text('• Switch PoE', 25, y);
+            y += 10;
+            doc.text('• Cabeamento de Rede', 25, y);
+            y += 20;
+            
+            // Observações
+            doc.setFontSize(14);
+            doc.text('Observações:', 20, y);
+            y += 15;
+            
+            doc.setFontSize(12);
+            doc.text('Este hotspot foi configurado para fornecer acesso Wi-Fi', 25, y);
+            y += 8;
+            doc.text('gratuito à população, conforme especificações do', 25, y);
+            y += 8;
+            doc.text('Pregão Eletrônico 71/2022 da Prefeitura de Guaíba.', 25, y);
+            
+            doc.save(`hotspot-${link.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+        }
+
+        // Inicializar
+        updateDisplay();
+        updateItinerantDisplay();
+        updateHotspotDisplay();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97facd116065a623',t:'MTc1Nzk2NzM3OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
