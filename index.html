@@ -1135,5 +1135,40 @@ function exportToCSV() {
 // (Se quiser eu reescrevo aqui também — mantive as originais no seu HTML, mas se
 // você preferir, adiciono todas as versões completas aqui também.)
 
+/* =========================
+   WRAPPERS PARA BOTÕES
+   ========================= */
+
+// Troca de painéis
+function showPanel(panel) {
+  document.getElementById("itinerantPanel").classList.add("hidden");
+  document.getElementById("hotspotPanel").classList.add("hidden");
+
+  if (panel === "main") {
+    // Painel principal já está visível no HTML
+  } else if (panel === "itinerant") {
+    document.getElementById("itinerantPanel").classList.remove("hidden");
+  } else if (panel === "hotspot") {
+    document.getElementById("hotspotPanel").classList.remove("hidden");
+  }
+}
+
+// Exportações individuais
+function exportLinkToPDF(id) {
+  alert("Exportar Link " + id + " para PDF (implementar se desejar)");
+}
+function exportItinerantToPDF() {
+  exportToPDF(); // usa o export geral
+}
+function exportItinerantToCSV() {
+  exportToCSV(); // usa o export geral
+}
+function exportHotspotToPDF() {
+  exportToPDF();
+}
+function exportHotspotToCSV() {
+  exportToCSV();
+}
+
 </script>
 
