@@ -539,17 +539,21 @@ async function saveLink(id) {
   }
 }
 
-/* =========================
-   DISPLAY / UI de Links
-   ========================= */
 function updateDisplay() {
   const totalLinks = links.length;
   const externalBandwidth = links.reduce((sum, link) => sum + (link.speed || 0), 0);
   const hotspotBandwidth = hotspotLinks.filter(link => link.isActive).reduce((sum, link) => sum + (link.speed || 0), 0);
+
+  // 🚨 itinerantBandwidth existe, mas não entra mais na soma
   const itinerantBandwidth = itinerantLinks.reduce((sum, link) =>
-      link.isActive ? sum + (link.subLinks ? link.subLinks.filter(sl => sl.enabled).reduce((s, sl) => s + (sl.speed || 0), 0) : 0) : sum
-    , 0);
-  const totalBandwidth = externalBandwidth + hotspotBandwidth + itinerantBandwidth;
+    link.isActive ? sum + (link.subLinks ? link.subLinks.filter(sl => sl.enabled).reduce((s, sl) => s + (sl.speed || 0), 0) : 0) : sum
+  , 0);
+
+  // ✅ agora só soma externo + hotspot
+  const totalBandwidth = externalBandwidth + hotspotBandwidth;
+
+  // resto do seu código continua igual...
+
 
   // Ajustar concentrador automaticamente baseado em capacidades predefinidas
   if (totalBandwidth > 0) {
