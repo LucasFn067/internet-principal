@@ -1262,5 +1262,117 @@ function exportHotspotToPDF() {
   }
 }
 
+/* =========================
+   EXPORTAR PDF PADRÃO
+   ========================= */
+
+// LINK EXTERNO
+function exportLinkToPDF(id) {
+  const link = links.find(l => l.id === id);
+  if (!link) {
+    alert("Link não encontrado!");
+    return;
+  }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Cabeçalho
+    doc.setFontSize(16);
+    doc.text("Relatório de Link Externo - Prefeitura de Guaíba", 20, 20);
+    doc.setFontSize(12);
+    doc.text("Pregão Eletrônico 71/2022", 20, 30);
+
+    // Informações do link
+    let y = 50;
+    doc.setFontSize(12);
+    doc.text("Informações do Link:", 20, y); y += 10;
+    doc.text(`Nome: ${link.name}`, 20, y); y += 8;
+    doc.text(`Endereço: ${link.address}`, 20, y); y += 8;
+    if (link.coordinates) { doc.text(`Coordenadas: ${link.coordinates}`, 20, y); y += 8; }
+    doc.text(`Velocidade: ${link.speed} Mbps`, 20, y); y += 8;
+    doc.text(`Data de Cadastro: ${link.dateCreated}`, 20, y); y += 15;
+
+    // Equipamentos Necessários
+    doc.text("Equipamentos Necessários:", 20, y); y += 10;
+    doc.text("• PONTO COM NOBREAK", 25, y); y += 8;
+    doc.text("• MIKROTIK", 25, y); y += 8;
+    doc.text("• ONU", 25, y); y += 8;
+    doc.text("• RACK", 25, y); y += 15;
+
+    // Observações
+    doc.text("Observações:", 20, y); y += 10;
+    doc.text("Este link externo foi configurado conforme especificações", 25, y); y += 8;
+    doc.text("do Pregão Eletrônico 71/2022 da Prefeitura de Guaíba.", 25, y); y += 8;
+    doc.text("Todos os equipamentos listados são obrigatórios para", 25, y); y += 8;
+    doc.text("o funcionamento adequado do link.", 25, y);
+
+    // Salvar PDF
+    doc.save(`link-externo-${link.name.replace(/\s+/g, "_")}.pdf`);
+  } catch (err) {
+    console.error("exportLinkToPDF error", err);
+    alert("Erro ao exportar PDF: " + (err.message || JSON.stringify(err)));
+  }
+}
+
+
+// LINK ITINERANTE
+function exportItinerantLinkToPDF(id) {
+  const link = itinerantLinks.find(l => l.id === id);
+  if (!link) {
+    alert("Link itinerante não encontrado!");
+    return;
+  }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Cabeçalho
+    doc.setFontSize(16);
+    doc.text("Relatório de Link Itinerante - Prefeitura de Guaíba", 20, 20);
+    doc.setFontSize(12);
+    doc.text("Pregão Eletrônico 71/2022", 20, 30);
+
+    // Informações do link itinerante
+    let y = 50;
+    doc.setFontSize(12);
+    doc.text("Informações do Link Itinerante:", 20, y); y += 10;
+    doc.text(`Nome: ${link.name}`, 20, y); y += 8;
+    doc.text(`Localização: ${link.location}`, 20, y); y += 8;
+    if (link.coordinates) { doc.text(`Coordenadas: ${link.coordinates}`, 20, y); y += 8; }
+    doc.text(`Período: ${link.period}`, 20, y); y += 8;
+    doc.text(`Status: ${link.isActive ? "Ativo" : "Inativo"}`, 20, y); y += 8;
+    doc.text(`Acesso: ${link.isPublic ? "Público" : "Privado"}`, 20, y); y += 8;
+    doc.text(`Wi-Fi: ${link.needsWifi ? "Sim" : "Não"}`, 20, y); y += 8;
+    if (link.needsWifi) {
+      doc.text(`SSID: ${link.wifiSSID}`, 25, y); y += 8;
+      doc.text(`Senha: ${link.wifiPassword}`, 25, y); y += 8;
+    }
+    doc.text(`Cabo LAN: ${link.needsLan ? "Sim" : "Não"}`, 20, y); y += 15;
+
+    // Configuração de Sub-links
+    const activeSubLinks = link.subLinks ? link.subLinks.filter(sl => sl.enabled).length : 0;
+    const totalBandwidth = activeSubLinks * 100;
+    doc.text("Configuração de Sub-Links:", 20, y); y += 10;
+    doc.text(`Sub-Links Ativos: ${activeSubLinks}/100`, 20, y); y += 8;
+    doc.text(`Velocidade Total: ${totalBandwidth} Mbps`, 20, y); y += 8;
+    doc.text("Cada sub-link fornece 100 Mbps", 20, y); y += 15;
+
+    // Valor de Cobrança
+    doc.text("Valor de Cobrança:", 20, y); y += 10;
+    doc.text(`Quantidade de Links Unificados: ${activeSubLinks}`, 20, y); y += 8;
+    doc.text("Valor será cobrado com base na quantidade de links ativos", 20, y); y += 8;
+    doc.text("conforme especificado no contrato do Pregão 71/2022.", 20, y);
+
+    // Salvar PDF
+    doc.save(`link-itinerante-${link.name.replace(/\s+/g, "_")}.pdf`);
+  } catch (err) {
+    console.error("exportItinerantLinkToPDF error", err);
+    alert("Erro ao exportar PDF: " + (err.message || JSON.stringify(err)));
+  }
+}
+
 </script>
 
