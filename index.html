@@ -1170,5 +1170,97 @@ function exportHotspotToCSV() {
   exportToCSV();
 }
 
+/* =========================
+   EXPORTAR PDF INDIVIDUAL
+   ========================= */
+
+// Exporta apenas UM link externo
+function exportLinkToPDF(id) {
+  const link = links.find(l => l.id === id);
+  if (!link) {
+    alert("Link não encontrado!");
+    return;
+  }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Relatório de Link Externo", 20, 20);
+    doc.setFontSize(12);
+    doc.text(`Nome: ${link.name}`, 20, 40);
+    doc.text(`Endereço: ${link.address}`, 20, 50);
+    if (link.coordinates) doc.text(`Coordenadas: ${link.coordinates}`, 20, 60);
+    doc.text(`Velocidade: ${link.speed} Mbps`, 20, 70);
+    doc.text(`Data de Cadastro: ${link.dateCreated}`, 20, 80);
+
+    doc.save(`link-${link.id}.pdf`);
+  } catch (err) {
+    console.error("exportLinkToPDF error", err);
+    alert("Erro ao exportar PDF: " + (err.message || JSON.stringify(err)));
+  }
+}
+
+// Exporta todos os links itinerantes
+function exportItinerantToPDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Relatório de Links Itinerantes", 20, 20);
+
+    let y = 40;
+    itinerantLinks.forEach(link => {
+      doc.setFontSize(12);
+      doc.text(`Nome: ${link.name}`, 20, y);
+      y += 8;
+      doc.text(`Localização: ${link.location}`, 20, y);
+      y += 8;
+      doc.text(`Período: ${link.period}`, 20, y);
+      y += 8;
+      doc.text(`Sub-Links Ativos: ${link.subLinks.filter(sl => sl.enabled).length}`, 20, y);
+      y += 12;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    doc.save("links-itinerantes.pdf");
+  } catch (err) {
+    console.error("exportItinerantToPDF error", err);
+    alert("Erro ao exportar PDF: " + (err.message || JSON.stringify(err)));
+  }
+}
+
+// Exporta todos os hotspots
+function exportHotspotToPDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("Relatório de Hotspots", 20, 20);
+
+    let y = 40;
+    hotspotLinks.forEach(link => {
+      doc.setFontSize(12);
+      doc.text(`Nome: ${link.name}`, 20, y);
+      y += 8;
+      doc.text(`Endereço: ${link.address}`, 20, y);
+      y += 8;
+      doc.text(`Coordenadas: ${link.coordinates}`, 20, y);
+      y += 8;
+      doc.text(`Velocidade: ${link.speed || 1000} Mbps`, 20, y);
+      y += 12;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    doc.save("hotspots.pdf");
+  } catch (err) {
+    console.error("exportHotspotToPDF error", err);
+    alert("Erro ao exportar PDF: " + (err.message || JSON.stringify(err)));
+  }
+}
+
 </script>
 
